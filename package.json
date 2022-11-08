@@ -1,0 +1,28 @@
+{
+  "name": "all-in-bot",
+  "version": "1.0.0",
+  "description": "a discord game bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeah-the-boys/all-in-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yeah-the-boys/all-in-bot/issues"
+  },
+  "homepage": "https://github.com/yeah-the-boys/all-in-bot#readme",
+  "devDependencies": {
+    "@types/node-cron": "^3.0.5",
+    "prisma": "^4.6.1",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "chalk": "^5.1.2",
+    "node-cron": "^3.0.2"
+  }
+}

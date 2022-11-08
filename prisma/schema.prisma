@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  discordId            String                 @db.VarChar(255)
+  availableFunds       BigInt                 @default(100000)
+  createdAt            DateTime               @default(now()) @db.Timestamp(6)
+  updatedAt            DateTime               @updatedAt
+  roulettePlayerBet    RoulettePlayerBet[]
+  WonderwheelPlay      WonderwheelPlay[]
+  roulettePlay         RoulettePlay[]
+  PlayerOnRoulettePlay PlayerOnRoulettePlay[]
+}
+
+model RoulettePlayerBet {
+  id             Int                     @id @default(autoincrement())
+  bet            String                  @db.VarChar(255)
+  amount         BigInt
+  result         BigInt                  @default(0)
+  state          RoulettePlayerPlayState @default(PENDING)
+  createdAt      DateTime                @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime                @updatedAt
+  playerId       Int
+  roulettePlayId Int
+  player         Player                  @relation(fields: [playerId], references: [id])
+  roulettePlay   RoulettePlay            @relation(fields: [roulettePlayId], references: [id])
+}
+
+model RoulettePlay {
+  id                   Int                    @id @default(autoincrement())
+  winningNumber        Int?
+  state                RoulettePlayState      @default(PENDING)
+  createdAt            DateTime?              @default(now()) @db.Timestamp(6)
+  updatedAt            DateTime?              @updatedAt
+  roulettePlayerBet    RoulettePlayerBet[]
+  roulettePlayers      Player[]
+  PlayerOnRoulettePlay PlayerOnRoulettePlay[]
+}
+
+model PlayerOnRoulettePlay {
+  player         Player       @relation(fields: [playerId], references: [id])
+  playerId       Int
+  roulettePlay   RoulettePlay @relation(fields: [roulettePlayId], references: [id])
+  roulettePlayId Int
+  createdAt      DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @updatedAt
+
+  @@id([playerId, roulettePlayId])
+}
+
+model WonderwheelPlay {
+  id         Int      @id @default(autoincrement())
+  prize      BigInt
+  multiplier BigInt
+  amount     BigInt
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt
+  playerId   Int
+  player     Player   @relation(fields: [playerId], references: [id])
+}
+
+enum RoulettePlayerPlayState {
+  PENDING
+  WON
+  LOST
+  CANCELLED
+}
+
+enum RoulettePlayState {
+  PENDING
+  LOCKED
+  FINAL
+}
