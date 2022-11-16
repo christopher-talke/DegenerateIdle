@@ -7,6 +7,7 @@ RUN npm config set unsafe-perm true
 RUN npm install -g typescript
 RUN npm install -g ts-node
 RUN npm install
+RUN npx prisma generate
 COPY --chown=node:node . .
 RUN npm run tsc
 
