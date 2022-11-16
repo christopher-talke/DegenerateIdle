@@ -1,7 +1,9 @@
-namespace Roulette {
+import { Player } from '../../player/types/player';
+
+export declare namespace Roulette {
     interface RoulettePlayerBet {
         id: number;
-        bet: string;
+        bet: string | number;
         amount: number;
         result: number;
         state: RoulettePlayerPlayState;
@@ -13,14 +15,7 @@ namespace Roulette {
         roulettePlay?: RoulettePlay;
     }
 
-    enum RoulettePlayerPlayState {
-        PENDING = 'PENDING',
-        WON = 'WON',
-        LOST = 'LOST',
-        CANCELLED = 'CANCELLED',
-    }
-
-    interface RoulettePlay {
+    type RoulettePlay = {
         id: number;
         winningNumber: number | null;
         state: RoulettePlayState;
@@ -29,11 +24,25 @@ namespace Roulette {
         roulettePlayerBet?: RoulettePlayerBet[];
         roulettePlayers?: Player.Player[];
         PlayerOnRoulettePlay?: PlayerOnRoulettePlay[];
-    }
+    } | null;
 
-    enum RoulettePlayState {
-        PENDING = 'PENDING',
-        LOCKED = 'LOCKED',
-        FINAL = 'FINAL',
-    }
+    type PlayerOnRoulettePlay = {
+        playerId: number;
+        roulettePlayId: number;
+        createdAt: Date;
+        updatedAt: Date;
+    };
+}
+
+export const enum RoulettePlayerPlayState {
+    PENDING = 'PENDING',
+    WON = 'WON',
+    LOST = 'LOST',
+    CANCELLED = 'CANCELLED',
+}
+
+export const enum RoulettePlayState {
+    PENDING = 'PENDING',
+    LOCKED = 'LOCKED',
+    FINAL = 'FINAL',
 }

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { getCurrentTimestamp } from '@utils';
+import { getCurrentTimestamp } from './utilities';
 
 const now = getCurrentTimestamp;
 

@@ -19,4 +19,8 @@ function getCurrentTimestamp(): string {
     return `${hours}:${minutes}:${seconds} (${timezone})`;
 }
 
-export { getCurrentTimestamp };
+function formatMoney(value: number) {
+    return new Intl.NumberFormat('en-En', { style: 'currency', currency: 'USD' }).format(value / 100);
+}
+
+export { getCurrentTimestamp, formatMoney };
