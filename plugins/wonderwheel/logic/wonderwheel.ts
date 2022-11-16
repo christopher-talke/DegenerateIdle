@@ -45,11 +45,22 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
     const winningAmount = randomPrize * randomMultiplier;
 
     // Get user, update Available Funds, and cache the play with an hour expiry.
-    const player = await prisma.player.findFirst({
+    let player = await prisma.player.findFirst({
         where: {
             discordId: discordMessage.author.id,
         },
     });
+
+    if (player === null) {
+        player = await prisma.player.create({
+            data: {
+                discordId: discordMessage.author.id,
+                name: discordMessage.author.username,
+                availableFunds: 100000,
+            },
+        });
+        await SEND_DISCORD_MESSAGE({ discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId }, `looks like you havn't played before, we've just registered you. You've also been gifted $1,000 to start with!`);
+    }
 
     if (player) {
         player.availableFunds = player.availableFunds + winningAmount;
