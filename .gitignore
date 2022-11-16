@@ -105,4 +105,6 @@ dist
 
 # custom
 config.ts
+deploy.config.ts
 app.tar.gz
+deploy.sh
