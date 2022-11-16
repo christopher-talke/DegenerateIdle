@@ -71,7 +71,7 @@ ${GENERATE_PLAYER_BETS()}
                 ROULETTE_ROUND_PREV_STATE = ROULETTE_ROUND_NEW_STATE;
                 await UPDATE_DISCORD_MESSAGE(message);
                 if (ROULETTE_ROUND?.winningNumber) {
-                    await UPDATE_DISCORD_MESSAGE(message, { file: `https://files.talke.dev/roulette/result-${ROULETTE_ROUND?.winningNumber}.png` });
+                    await UPDATE_DISCORD_MESSAGE(message);
                 }
             }
         }, 1000);
