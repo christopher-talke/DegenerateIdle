@@ -20,5 +20,6 @@ COPY package*.json ./
 RUN npm install --production
 COPY --from=builder /home/node/app/dist ./dist
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma
 
 CMD [ "node", "dist/index.js"]
