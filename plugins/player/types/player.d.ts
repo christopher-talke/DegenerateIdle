@@ -1,22 +1,8 @@
-import { Roulette } from '../../roulette/types/roulette';
+import { BankAccount, Player } from "@prisma/client";
 
-export declare namespace Player {
-    interface Player {
-        id: number;
-        name: string;
-        discordId: string;
-        availableFunds: number;
-        createdAt: Date;
-        updatedAt: Date;
-
-        // Relations
-        roulettePlay: Roulette.RoulettePlay[]?;
-        roulettePlayerBet: Roulette.RoulettePlayerBet[]?;
-        PlayerOnRoulettePlay: Roulette.PlayerOnRoulettePlay[]?;
-        WonderwheelPlay: any[]?;
-
-        // Temporary values
-        positionChange?: number;
-        fundsAtRisk?: number;
-    }
+export interface RoulettePlayer extends Player {
+    BankAccount : BankAccount[];
+    fundsAtRisk : number?;
+    previousPosition: number?;
+    newPosition: number?;
 }

@@ -8,30 +8,36 @@ datasource db {
 }
 
 model Player {
-  id                   Int                    @id @default(autoincrement())
-  name                 String                 @db.VarChar(255)
-  discordId            String                 @db.VarChar(255)
-  availableFunds       Int                    @default(100000)
-  createdAt            DateTime               @default(now()) @db.Timestamp(6)
-  updatedAt            DateTime               @updatedAt
-  roulettePlayerBet    RoulettePlayerBet[]
-  WonderwheelPlay      WonderwheelPlay[]
-  roulettePlay         RoulettePlay[]
-  PlayerOnRoulettePlay PlayerOnRoulettePlay[]
+  id                        Int                    @id @default(autoincrement())
+  name                      String                 @db.VarChar(255)
+  discordId                 String                 @db.VarChar(255)
+  z_availableFunds          BigInt                 @default(100000)
+  createdAt                 DateTime               @default(now()) @db.Timestamp(6)
+  updatedAt                 DateTime               @updatedAt
+
+  RoulettePlayerBet         RoulettePlayerBet[]
+  RoulettePlay              RoulettePlay[]
+  PlayerOnRoulettePlay      PlayerOnRoulettePlay[]
+  WonderwheelPlay           WonderwheelPlay[]
+  BankAccount               BankAccount[]
+  BankAccountTransactions   BankAccountTransaction[]
 }
+
+// Roulette Plugin
 
 model RoulettePlayerBet {
   id             Int                     @id @default(autoincrement())
   bet            String                  @db.VarChar(255)
-  amount         Int
+  amount         BigInt
   result         Int                     @default(0)
   state          RoulettePlayerPlayState @default(PENDING)
   createdAt      DateTime                @default(now()) @db.Timestamp(6)
   updatedAt      DateTime                @updatedAt
   playerId       Int
   roulettePlayId Int
-  player         Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  roulettePlay   RoulettePlay            @relation(fields: [roulettePlayId], references: [id], onDelete: Cascade)
+
+  Player         Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  RoulettePlay   RoulettePlay            @relation(fields: [roulettePlayId], references: [id], onDelete: Cascade)
 }
 
 model RoulettePlay {
@@ -40,8 +46,9 @@ model RoulettePlay {
   state                RoulettePlayState      @default(PENDING)
   createdAt            DateTime?              @default(now()) @db.Timestamp(6)
   updatedAt            DateTime?              @updatedAt
-  roulettePlayerBet    RoulettePlayerBet[]
-  roulettePlayers      Player[]
+
+  RoulettePlayerBet    RoulettePlayerBet[]
+  RoulettePlayers      Player[]
   PlayerOnRoulettePlay PlayerOnRoulettePlay[]
 }
 
@@ -56,17 +63,6 @@ model PlayerOnRoulettePlay {
   @@id([playerId, roulettePlayId])
 }
 
-model WonderwheelPlay {
-  id         Int      @id @default(autoincrement())
-  prize      Int
-  multiplier Int
-  amount     Int
-  createdAt  DateTime @default(now()) @db.Timestamp(6)
-  updatedAt  DateTime @updatedAt
-  playerId   Int
-  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-}
-
 enum RoulettePlayerPlayState {
   PENDING
   WON
@@ -78,4 +74,61 @@ enum RoulettePlayState {
   PENDING
   LOCKED
   FINAL
+}
+
+// Wonderwheel Plugin
+
+model WonderwheelPlay {
+  id         Int      @id @default(autoincrement())
+  prize      Int
+  multiplier Int
+  amount     BigInt
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt
+
+  playerId   Int
+  Player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// Bank Plugin
+
+model BankAccount {
+  id         Int               @id @default(autoincrement())
+  name       String            @default("New Account")
+  amount     BigInt            @default(0)
+  type       BankAccountType   @default(SAVINGS)
+  status     BankAccountStatus @default(OPEN)
+  lockedTime DateTime?
+  createdAt  DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime          @updatedAt
+  playerId   Int
+
+  Player                Player                        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  InboundTranscations   BankAccountTransaction[]      @relation(name: "inboundTransactions")
+  OutboundTranscations  BankAccountTransaction[]      @relation(name: "outboundTransactions")
+}
+
+enum BankAccountType {
+  SPENDINGS
+  SAVINGS
+  DEPOSIT
+}
+
+enum BankAccountStatus {
+  OPEN
+  LOCKED
+}
+
+model BankAccountTransaction {
+  id                Int               @id @default(autoincrement())
+  amount            BigInt
+  sourcePlayerId    Int
+  sourceAccountId   Int
+  targetAccountId   Int
+  createdAt         DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime          @updatedAt
+
+  SourceAccount     BankAccount       @relation(name:"inboundTransactions", fields: [sourceAccountId], references: [id], onDelete: Cascade)
+  TargetAccount     BankAccount       @relation(name: "outboundTransactions", fields: [targetAccountId], references: [id], onDelete: Cascade)
+  Player            Player            @relation(fields: [sourcePlayerId], references: [id], onDelete: Cascade)
 }

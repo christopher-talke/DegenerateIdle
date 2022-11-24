@@ -1,9 +1,13 @@
 import { Message } from 'discord.js';
+
 import { prisma } from '../../../prisma/client';
 import { redis } from '../../../redis/client';
 import { formatMoney } from '../../../utils/utilities';
+import { REGISTER_PLAYER } from '../../player/logic/registerPlayer';
+import { RoulettePlayer } from '../../player/types/player';
 import { SEND_DISCORD_MESSAGE } from '../../roulette/discord/roulette';
 import { ROULETTE_PLAYERS } from '../../roulette/logic';
+
 import IMPORTED_WONDERWHEEL_MULTIPLIERS from './mapping/wonderwheel-multipliers.json';
 import IMPORTED_WONDERWHEEL_PRIZES from './mapping/wonderwheel-prizes.json';
 
@@ -49,47 +53,43 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
         where: {
             discordId: discordMessage.author.id,
         },
-    });
+        include : {
+            BankAccount: {
+                where: {
+                    type: 'SPENDINGS'
+                }
+            }
+        }
+    }) as RoulettePlayer | null
 
     if (player === null) {
-        player = await prisma.player.create({
-            data: {
-                discordId: discordMessage.author.id,
-                name: discordMessage.author.username,
-                availableFunds: 100000,
-            },
-        });
+        player = await REGISTER_PLAYER(discordMessage.author.id, discordMessage.author.username);
+
         await SEND_DISCORD_MESSAGE({ discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId }, `looks like you havn't played before, we've just registered you. You've also been gifted $1,000 to start with!`);
     }
 
     if (player) {
-        player.availableFunds = player.availableFunds + winningAmount;
-        await prisma.player.update({
-            where: {
-                id: player.id,
-            },
-            data: {
-                availableFunds: player.availableFunds,
-                WonderwheelPlay: {
-                    create: {
-                        prize: randomPrize,
-                        multiplier: randomMultiplier,
-                        amount: winningAmount,
-                    },
-                },
-            },
-        });
+        player.BankAccount[0].amount = player.BankAccount[0].amount + winningAmount;
 
+        await prisma.bankAccount.update({
+            where: {
+                id: player.BankAccount[0].id
+            },
+            data : {
+                amount : player.BankAccount[0].amount
+            }
+        })
+
+        const currentTime = new Date()
         await redis.set(`wonderwheel-${discordMessage.author.id}`, 1, 'EX', 3600);
         await SEND_DISCORD_MESSAGE(
             { discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId },
-            `see your results below:\n\`\`\`
-Prize:                  ${formatMoney(randomPrize)}
-Multiplier:             x${randomMultiplier}
-Winning Amount:         ${formatMoney(winningAmount)}
-\`\`\`
-You'll be able to play again in an hour!
-`
+            'see your results below:\n```' + 
+            `Prize:                  ${formatMoney(randomPrize)}\n` +
+            `Multiplier:             x${randomMultiplier}\n` +
+            `Winning Amount:         ${formatMoney(winningAmount)}\n` +
+            '```\n' +
+            `You'll be able to play again at around '${currentTime.getHours() + 1}:${currentTime.getMinutes()}'!`
         );
     } else {
         await SEND_DISCORD_MESSAGE({ discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId }, `uhhh... looks like there was a problem playing the wonderwheel, sorry!`);

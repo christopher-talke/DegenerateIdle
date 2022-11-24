@@ -23,4 +23,8 @@ function formatMoney(value: number) {
     return new Intl.NumberFormat('en-En', { style: 'currency', currency: 'USD' }).format(value / 100);
 }
 
-export { getCurrentTimestamp, formatMoney };
+function handleFloat(rawNumber: number | string) : number {
+    return Number((Number(rawNumber) as number).toFixed(2))
+}
+
+export { getCurrentTimestamp, formatMoney, handleFloat };

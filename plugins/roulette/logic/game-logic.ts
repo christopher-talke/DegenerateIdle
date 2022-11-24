@@ -1,7 +1,7 @@
+import { RoulettePlayState, RoulettePlay } from '@prisma/client';
 import { prisma } from '../../../prisma/client';
-import { Roulette, RoulettePlayState } from '../types/roulette';
 
-async function CREATE_NEW_ROULETTE_ROUND() {
+export async function CREATE_NEW_ROULETTE_ROUND() {
     try {
         await CLEAR_ZOMBIE_MATCHES();
         const createdRouletteRound = await prisma.roulettePlay.create({
@@ -17,7 +17,7 @@ async function CREATE_NEW_ROULETTE_ROUND() {
     }
 }
 
-async function CLEAR_ZOMBIE_MATCHES(): Promise<null> {
+export async function CLEAR_ZOMBIE_MATCHES(): Promise<null> {
     try {
         await prisma.roulettePlay.deleteMany({
             where: {
@@ -32,12 +32,12 @@ async function CLEAR_ZOMBIE_MATCHES(): Promise<null> {
     return null;
 }
 
-async function PLAY_ROULETTE_ROUND(rouletteRoundData: Roulette.RoulettePlay): Promise<Roulette.RoulettePlay> {
+export async function PLAY_ROULETTE_ROUND(rouletteRoundData: RoulettePlay): Promise<RoulettePlay> {
     rouletteRoundData && (rouletteRoundData.winningNumber = Math.floor(Math.random() * 36));
     return rouletteRoundData;
 }
 
-async function UPDATE_ROULETTE_ROUND(rouletteRoundData: Roulette.RoulettePlay) {
+export async function UPDATE_ROULETTE_ROUND(rouletteRoundData: RoulettePlay) {
     if (rouletteRoundData === null) return null;
 
     try {
@@ -53,5 +53,3 @@ async function UPDATE_ROULETTE_ROUND(rouletteRoundData: Roulette.RoulettePlay) {
         return null;
     }
 }
-
-export { CREATE_NEW_ROULETTE_ROUND, PLAY_ROULETTE_ROUND, UPDATE_ROULETTE_ROUND };
