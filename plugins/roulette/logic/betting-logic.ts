@@ -1,15 +1,19 @@
-import { Player } from '../../player/types/player';
-import { prisma } from '../../../prisma/client';
 import { Message } from 'discord.js';
-import { SEND_DISCORD_MESSAGE } from '../discord/roulette';
+import * as _ from 'lodash'
+import { RoulettePlayState } from '@prisma/client';
 
+import { prisma } from '../../../prisma/client';
+import { SEND_DISCORD_MESSAGE } from '../discord/roulette';
 import IMPORTED_BETTING_OPTIONS from './mapping/betting_options.json';
-import { Roulette, RoulettePlayState } from '../types/roulette';
+import logger from '../../../utils/logger';
 
 // Global State Import
 import { ROULETTE_ROUND, ROULETTE_PLAYERS, ROULETTE_ROUND_BETS, SET_ROULETTE_PLAYERS, ROULETTE_ROUND_CURRENT_STATUS } from './index';
-import logger from '../../../utils/logger';
+
+// Type Imports
 import { REGISTER_PLAYER } from '../../player/logic/registerPlayer';
+import { RoulettePlayer } from '../../player/types/player';
+import { handleFloat } from '../../../utils/utilities';
 
 const BETTING_OPTIONS: BettingOptions = {
     ...IMPORTED_BETTING_OPTIONS,
@@ -25,6 +29,7 @@ interface BettingOptions {
 }
 
 export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData: bettingDataToBeProcessed): Promise<void> {
+
     const {
         author: { id: discordUserId },
     } = discordMessage;
@@ -39,10 +44,10 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
         return;
     }
 
-    logger.info(`Player (ID: '${discordUserId}' is placing a bet (DATA: '${JSON.stringify(bettingData)}').`);
+    logger.info(`Player (ID '${discordUserId}' is placing a bet (DATA: '${JSON.stringify(bettingData)}').`);
     // Validate the bet
     const isValidBet = VALIDATE_ROULETTE_BET(bettingData);
-    logger.info(`Players (ID: '${discordUserId}') bet validity is '${isValidBet}'.`);
+    logger.info(`Players (ID '${discordUserId}') bet validity is '${isValidBet}'.`);
     if (isValidBet) {
         let playerData = ROULETTE_PLAYERS.find((player) => player.discordId === discordUserId);
 
@@ -51,25 +56,25 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
         if (playerHasNotJoinedRound) {
             // If not, go get them and cache their details...
             playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId, discordMessage);
-            logger.info(`Player (ID: '${discordUserId}') has been registered against this round.`);
+            logger.info(`Player (ID '${discordUserId}') has been registered against this round.`);
         }
 
         if (playerData) {
             // All in catcher
             if (bettingData.amount === 'all') {
-                bettingData.amount = playerData.availableFunds / 100;
+                bettingData.amount = playerData.BankAccount[0].amount / 100;
             } else {
-                bettingData.amount = Number((bettingData.amount as number).toFixed(2));
+                bettingData.amount = handleFloat(bettingData.amount);
             }
 
             // Check if player has enough money, and write new values to memory if they do.
-            if (playerData.availableFunds < Number((bettingData.amount as number) * 100)) {
+            if (playerData.BankAccount[0].amount < Number((bettingData.amount as number) * 100)) {
                 await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, 'you do not have enough funds to place this bet.');
                 return;
             }
 
             await CREATE_ROULETTE_BET(playerData, bettingData);
-            logger.info(`Player (ID: '${discordUserId}') has had their bet registered against this round`);
+            logger.info(`Player (ID '${discordUserId}') has had their bet registered against this round`);
         }
     } else {
         await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ' that was an invalid bet, please try again.');
@@ -102,22 +107,32 @@ function VALIDATE_ROULETTE_BET(bettingData: bettingDataToBeProcessed): boolean {
     return IS_VALID_AMOUNT && IS_VALID_BET;
 }
 
-export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, discordMessage: Message): Promise<Player.Player | undefined> {
+export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, discordMessage: Message): Promise<RoulettePlayer | undefined> {
     if (ROULETTE_ROUND === null) {
         SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ` there is currently no active round to bet against, try again soon.`);
     }
     try {
-        let playerData = null as Player.Player | null;
+        let playerData = null as RoulettePlayer | null;
         playerData = (await prisma.player.findFirst({
             where: {
                 discordId: discordUserId,
             },
-        })) as Player.Player | null;
+            include : {
+                BankAccount : {
+                    where : {
+                        type : 'SPENDINGS'
+                    }
+                }
+            }
+        })) as RoulettePlayer | null;
+
 
         if (playerData === null) {
             await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ` you have now been registered, we've gifted you $1,000 to start playing with!`);
-            playerData = (await REGISTER_PLAYER(discordUserId, discordMessage.author.username)) as Player.Player;
+            playerData = (await REGISTER_PLAYER(discordUserId, discordMessage.author.username)) as RoulettePlayer;
         }
+
+        playerData.previousPosition = playerData?.BankAccount[0].amount
 
         ROULETTE_PLAYERS.push(playerData);
 
@@ -128,39 +143,46 @@ export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, disco
     }
 }
 
-async function CREATE_ROULETTE_BET(playerData: Player.Player, bettingData: bettingDataToBeProcessed) {
+async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bettingDataToBeProcessed) {
     try {
         const amountAsCalculableValue = Number(bettingData.amount) * 100;
-        const createdRouletteBet = (await prisma.roulettePlayerBet.create({
+        const createdRouletteBet = await prisma.roulettePlayerBet.create({
             data: {
                 bet: `${bettingData.bet}`,
                 amount: amountAsCalculableValue,
                 state: RoulettePlayState.PENDING,
-                player: {
-                    connect: {
-                        id: playerData?.id,
-                    },
+                Player: {
+                    connect : {
+                        id: playerData.id
+                    }
                 },
-                roulettePlay: {
+                RoulettePlay: {
                     connect: {
                         id: ROULETTE_ROUND?.id,
                     },
                 },
             },
-        })) as Roulette.RoulettePlayerBet;
+        })
+
         const hasPlayedJoinedRound = ROULETTE_PLAYERS.find((player) => player.id === playerData.id);
         if (hasPlayedJoinedRound === undefined) {
             ROULETTE_PLAYERS.push(playerData);
         }
 
+        // Setup or adjust the counters
         let fundsAtRisk = playerData.fundsAtRisk || 0;
 
+        // Adjust the bank account
+        const spendings = _.cloneDeep(playerData.BankAccount[0]);
+        spendings.amount = spendings.amount - amountAsCalculableValue;
+
+        // Save all the things to memory
         const playersWithoutBettingPlayer = ROULETTE_PLAYERS.filter((player) => player.id !== playerData.id);
         SET_ROULETTE_PLAYERS([
             ...playersWithoutBettingPlayer,
             {
                 ...playerData,
-                availableFunds: playerData.availableFunds - amountAsCalculableValue,
+                BankAccount: [spendings],
                 fundsAtRisk: fundsAtRisk + amountAsCalculableValue,
             },
         ]);

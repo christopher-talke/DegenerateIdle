@@ -21,7 +21,7 @@ ssh $user@$host << EOF
   docker run \
       --name degenerate_db \
       -e POSTGRES_PASSWORD=password \
-      -v ~/degenerate/database:/var/lib/postgresql/data \
+      -v ~/DATA/degenerate/database:/var/lib/postgresql/data \
       -p 5555:5432 \
       -d --restart unless-stopped \
       postgres

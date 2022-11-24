@@ -44,6 +44,9 @@ type DISCORD_IDS = {
 };
 
 export async function UPDATE_DISCORD_MESSAGE(value: string) {
+
+    try {
+        
     if (ROULETTE_ROUND === null) return;
     if (discordBotStatus !== 'READY') return;
 
@@ -77,36 +80,38 @@ export async function UPDATE_DISCORD_MESSAGE(value: string) {
             await targetTextMessage.edit(value);
         }
     }
+
+    } catch (error) {
+        logger.error(JSON.stringify(error))
+        logger.error(`It looks like there was an error trying with updating the roulette discord message.`)
+    }
 }
 
 export async function DUMP_TO_HISTORY() {
-    let message = `**Round Details**
-\`\`\`
-ROUND #:           ${ROULETTE_ROUND?.id || '-'}
-DRAWN #:           ${ROULETTE_ROUND?.winningNumber || '-'}
-PLAYERS:           ${ROULETTE_PLAYERS.length}
-BETS:              ${ROULETTE_ROUND_BETS.length}
-\`\`\`
-`;
+    let winningNumberString = ROULETTE_ROUND !== null && ROULETTE_ROUND.winningNumber !== null && ROULETTE_ROUND.winningNumber >= 0 ? ROULETTE_ROUND.winningNumber : '-';
+    let message = `**Round Details**\n` +
+                  '```\n' +
+                  `ROUND #:           ${ROULETTE_ROUND?.id || '-'}\n` +
+                  `DRAWN #:           ${winningNumberString}\n` +
+                  `PLAYERS:           ${ROULETTE_PLAYERS.length}\n` +
+                  `BETS:              ${ROULETTE_ROUND_BETS.length}\n` +
+                  '```\n\n';
 
     if (ROULETTE_PLAYERS.length !== 0 && ROULETTE_ROUND_BETS.length !== 0) {
-        message += `**Player Details**
-\`\`\`
-${GENERATE_PLAYERS()}
-\`\`\`
-`;
+        message += `**Player Details**\n` +
+                   '```\n' +
+                   `${GENERATE_PLAYERS()}\n` +
+                   '```\n\n';
 
-        message += `**Bet Details**
-\`\`\`
-${GENERATE_PLAYER_BETS()}
-\`\`\`
-`;
+        message += `**Bet Details**\n` +
+                   '```\n' +
+                   `${GENERATE_PLAYER_BETS()}\n` +
+                   '```\n';
     }
 
     for (let i = 0; i < ROULLETE.GUILDS.length; i++) {
         const GUILD = ROULLETE.GUILDS[i];
         const TargetedChannel = (await discord.channels.fetch(GUILD.HISTORY_CHANNEL_ID)) as any;
-
         await TargetedChannel.send(`https://files.talke.dev/roulette/result-${ROULETTE_ROUND?.winningNumber}.png`);
         await TargetedChannel.send(message);
     }
@@ -124,10 +129,8 @@ export function GENERATE_PLAYER_BETS() {
         t.cell('Bet', BETTING_TRANSLATIONS[betByPlayer.bet]);
         t.cell('Amount', formatMoney(betByPlayer.amount));
         t.cell('Potential', formatMoney(betByPlayer.amount * BETTING_PAYOUTS[betByPlayer.bet]));
-        t.cell('Status', betByPlayer.state);
-        t.newRow();
     }
-
+    
     if (betsByPlayer.length > 0) return t.toString();
 
     return 'No Player Bets Yet...';
@@ -139,21 +142,22 @@ export function GENERATE_PLAYERS() {
         const player = ROULETTE_PLAYERS[i];
         t.cell('#', player.id);
         t.cell('Player', player?.name);
-        t.cell('Available Funds', formatMoney(player.availableFunds));
+
+        t.cell('Available Funds', formatMoney(player.BankAccount[0].amount));
         if (player.fundsAtRisk && !ROULETTE_ROUND?.winningNumber) {
             t.cell('Funds At Risk', formatMoney(player.fundsAtRisk));
         }
         if (player.fundsAtRisk && ROULETTE_ROUND?.winningNumber) {
             t.cell('Funds Risked', formatMoney(player.fundsAtRisk));
         }
-        if (ROULETTE_ROUND?.winningNumber && player.positionChange) {
-            t.cell('Position Change', formatMoney(player.positionChange));
+        if (ROULETTE_ROUND?.winningNumber && player.previousPosition && player.newPosition) {
+            t.cell('Position Change', formatMoney(player.newPosition - player.previousPosition));
         }
+
         t.newRow();
     }
 
     if (ROULETTE_PLAYERS.length > 0) return t.toString();
-
     return 'No Players Yet...';
 }
 
@@ -176,7 +180,7 @@ discord.on('messageCreate', async (message) => {
     if (channelId === targetGuild?.BETTING_CHANNEL_ID) {
         if (cmd === '!join') {
             await JOIN_PLAYER_TO_ROULETTE_ROUND(author.id, message);
-            logger.info(`Player (ID: '${author.id}') has been registered against this round.`);
+            logger.info(`Player (ID '${author.id}') has been registered against this round.`);
         }
 
         if (cmd === '!gamble') {
