@@ -10,6 +10,7 @@ import { formatMoney } from '../../../utils/utilities';
 
 import { RoulettePlay, RoulettePlayerBet, RoulettePlayerPlayState} from '@prisma/client';
 import { RoulettePlayer } from '../../player/types/player'
+import { RoulettePlayerBetExt } from '../types/roulette';
 
 interface BettingPayouts {
     [key: string]: number;
@@ -28,7 +29,7 @@ const BETTING_OPTIONS: BettingOptions = {
 };
 
 
-export async function PROCESS_ROULETTE_RESULTS(passedRoulleteRound: RoulettePlay, roulletePlayers: RoulettePlayer[], roulleteBets: RoulettePlayerBet[]) {
+export async function PROCESS_ROULETTE_RESULTS(passedRoulleteRound: RoulettePlay, roulletePlayers: RoulettePlayer[], roulleteBets: RoulettePlayerBetExt[]) {
     logger.info(`Calculating round results (ID '${passedRoulleteRound?.id}').`);
 
     // Deep clones to ensure reference can't get changed elsewhere as these results should be final.
@@ -55,16 +56,16 @@ export async function PROCESS_ROULETTE_RESULTS(passedRoulleteRound: RoulettePlay
                     // Mark as a winning bet
                     playerBet.state = RoulettePlayerPlayState.WON;
                     // Calculate winning, and assign to player
-                    const calculatedWinnings = playerBet.amount * BETTING_PAYOUTS[playerBet.bet];
+                    const calculatedWinnings = playerBet.amountAsNumber * BETTING_PAYOUTS[playerBet.bet];
                     totalCalculated = totalCalculated + calculatedWinnings;
                     logger.info(`Winning result for bet (ID '${playerBet.id}') by player (ID '${player?.id}'), calculated winnings were '${formatMoney(calculatedWinnings)}'.`);
 
-                    player.BankAccount[0].amount = player.BankAccount[0].amount + calculatedWinnings;
+                    player.BankAccount[0].amountAsNumber = player.BankAccount[0].amountAsNumber + calculatedWinnings;
 
                 } else {
                     // Mark as a lost bet
-                    logger.info(`Losing result for bet (ID '${playerBet.id}') by player (ID '${player?.id}'), calculated loss was '${formatMoney(playerBet.amount)}'.`);
-                    let betAsNegative = playerBet.amount * -1;
+                    logger.info(`Losing result for bet (ID '${playerBet.id}') by player (ID '${player?.id}'), calculated loss was '${formatMoney(playerBet.amountAsNumber)}'.`);
+                    let betAsNegative = playerBet.amountAsNumber * -1;
                     totalCalculated = totalCalculated + betAsNegative;
                     playerBet.state = RoulettePlayerPlayState.LOST;
                 }
@@ -75,7 +76,7 @@ export async function PROCESS_ROULETTE_RESULTS(passedRoulleteRound: RoulettePlay
         }
 
         if (player.previousPosition && player.fundsAtRisk) {
-            player.newPosition = player.BankAccount[0].amount;
+            player.newPosition = player.BankAccount[0].amountAsNumber;
         }
 
         playerResults.push(player);
@@ -87,7 +88,7 @@ export async function PROCESS_ROULETTE_RESULTS(passedRoulleteRound: RoulettePlay
 
     // Update database player and bet calculations
     await UPDATE_PLAYER_BETS(betResuts);
-    await UPDATE_PLAYERS_BANKS(players);
+    await UPDATE_PLAYERS_BANKS(playerResults);
 
     logger.info(`Round results (ID '${roulleteRound?.id}') have been calculated and saved.`);
 }
@@ -117,7 +118,7 @@ async function UPDATE_PLAYERS_BANKS(players: RoulettePlayer[]) {
                 id : BankAccount[0].id
             }, 
             data: {
-                amount : BankAccount[0].amount
+                amount : `${BankAccount[0].amountAsNumber}`
             }
         })
     }

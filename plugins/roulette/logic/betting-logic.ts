@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
 import * as _ from 'lodash'
-import { RoulettePlayState } from '@prisma/client';
+
+import { RoulettePlayState } from '@prisma/client'
 
 import { prisma } from '../../../prisma/client';
 import { SEND_DISCORD_MESSAGE } from '../discord/roulette';
@@ -14,6 +15,7 @@ import { ROULETTE_ROUND, ROULETTE_PLAYERS, ROULETTE_ROUND_BETS, SET_ROULETTE_PLA
 import { REGISTER_PLAYER } from '../../player/logic/registerPlayer';
 import { RoulettePlayer } from '../../player/types/player';
 import { handleFloat } from '../../../utils/utilities';
+import { RoulettePlayerBetExt } from '../types/roulette';
 
 const BETTING_OPTIONS: BettingOptions = {
     ...IMPORTED_BETTING_OPTIONS,
@@ -46,6 +48,10 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
 
     logger.info(`Player (ID '${discordUserId}' is placing a bet (DATA: '${JSON.stringify(bettingData)}').`);
     // Validate the bet
+
+    if (typeof bettingData.amount === 'string') bettingData.amount = bettingData.amount.replace(/[\$\,]/gi, '');
+    if (Number(bettingData.amount) !== NaN) bettingData.amount = handleFloat(bettingData.amount);
+    
     const isValidBet = VALIDATE_ROULETTE_BET(bettingData);
     logger.info(`Players (ID '${discordUserId}') bet validity is '${isValidBet}'.`);
     if (isValidBet) {
@@ -60,15 +66,14 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
         }
 
         if (playerData) {
+
             // All in catcher
             if (bettingData.amount === 'all') {
-                bettingData.amount = playerData.BankAccount[0].amount / 100;
-            } else {
-                bettingData.amount = handleFloat(bettingData.amount);
+                bettingData.amount = playerData.BankAccount[0].amountAsNumber / 100;
             }
 
             // Check if player has enough money, and write new values to memory if they do.
-            if (playerData.BankAccount[0].amount < Number((bettingData.amount as number) * 100)) {
+            if (playerData.BankAccount[0].amountAsNumber < Number((bettingData.amount as number) * 100)) {
                 await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, 'you do not have enough funds to place this bet.');
                 return;
             }
@@ -132,7 +137,7 @@ export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, disco
             playerData = (await REGISTER_PLAYER(discordUserId, discordMessage.author.username)) as RoulettePlayer;
         }
 
-        playerData.previousPosition = playerData?.BankAccount[0].amount
+        playerData.previousPosition = playerData?.BankAccount[0].amountAsNumber
 
         ROULETTE_PLAYERS.push(playerData);
 
@@ -149,7 +154,7 @@ async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bett
         const createdRouletteBet = await prisma.roulettePlayerBet.create({
             data: {
                 bet: `${bettingData.bet}`,
-                amount: amountAsCalculableValue,
+                amount: `${amountAsCalculableValue}`,
                 state: RoulettePlayState.PENDING,
                 Player: {
                     connect : {
@@ -162,7 +167,7 @@ async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bett
                     },
                 },
             },
-        })
+        }) as RoulettePlayerBetExt
 
         const hasPlayedJoinedRound = ROULETTE_PLAYERS.find((player) => player.id === playerData.id);
         if (hasPlayedJoinedRound === undefined) {
@@ -174,7 +179,7 @@ async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bett
 
         // Adjust the bank account
         const spendings = _.cloneDeep(playerData.BankAccount[0]);
-        spendings.amount = spendings.amount - amountAsCalculableValue;
+        spendings.amountAsNumber = spendings.amountAsNumber - amountAsCalculableValue;
 
         // Save all the things to memory
         const playersWithoutBettingPlayer = ROULETTE_PLAYERS.filter((player) => player.id !== playerData.id);

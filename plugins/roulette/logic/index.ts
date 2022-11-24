@@ -5,13 +5,14 @@ import { CREATE_NEW_ROULETTE_ROUND, UPDATE_ROULETTE_ROUND, PLAY_ROULETTE_ROUND }
 import { GENERATE_PLAYER_BETS, GENERATE_PLAYERS, UPDATE_DISCORD_MESSAGE, DUMP_TO_HISTORY } from '../discord/roulette';
 import { PROCESS_ROULETTE_RESULTS } from './result-logic';
 
-import { RoulettePlay, RoulettePlayerBet, RoulettePlayState } from '@prisma/client';
+import { RoulettePlay, RoulettePlayState } from '@prisma/client';
+import { RoulettePlayerBetExt } from '../types/roulette'
 import { RoulettePlayer } from '../../player/types/player'
 
 // Game Globals
 export let ROULETTE_ROUND = null as RoulettePlay | null;
 export let ROULETTE_PLAYERS = [] as RoulettePlayer[];
-export let ROULETTE_ROUND_BETS = [] as RoulettePlayerBet[];
+export let ROULETTE_ROUND_BETS = [] as RoulettePlayerBetExt[];
 export let ROULLETE_MSECOND_COUNT = 60000 * 2.5;
 export let ROULETTE_ROUND_CURRENT_STATUS = `PREPARING FOR NEW GAME...`;
 export let ROULETTE_ROUND_PREV_STATE = `${ROULETTE_PLAYERS.length}|${ROULETTE_ROUND_BETS.length}|${ROULETTE_ROUND_CURRENT_STATUS}`;
@@ -20,7 +21,7 @@ export function SET_ROULETTE_PLAYERS(NEW_PLAYERS: RoulettePlayer[]) {
     return (ROULETTE_PLAYERS = NEW_PLAYERS);
 }
 
-export function SET_ROULETTE_ROUND_BETS(NEW_ROUND_BETS: RoulettePlayerBet[]) {
+export function SET_ROULETTE_ROUND_BETS(NEW_ROUND_BETS: RoulettePlayerBetExt[]) {
     return (ROULETTE_ROUND_BETS = NEW_ROUND_BETS);
 }
 

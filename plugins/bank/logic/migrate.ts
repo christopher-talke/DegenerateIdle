@@ -40,7 +40,7 @@ const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
                         name : 'Savings',
                         status : "OPEN",
                         type : "SAVINGS",
-                        amount : 0,
+                        amount : '0',
                         Player : {
                             connect : {
                                 id : player.id
@@ -60,7 +60,7 @@ const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
     } 
     
     catch (error) {
-        logger.error(JSON.stringify(error))
+        console.error(error)
         logger.info('There was an issue moving player funds from Player Entity to Bank Accounts.')
     }
 

@@ -69,14 +69,14 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
     }
 
     if (player) {
-        player.BankAccount[0].amount = player.BankAccount[0].amount + winningAmount;
+        player.BankAccount[0].amountAsNumber = player.BankAccount[0].amountAsNumber + winningAmount;
 
         await prisma.bankAccount.update({
             where: {
                 id: player.BankAccount[0].id
             },
             data : {
-                amount : player.BankAccount[0].amount
+                amount : `${player.BankAccount[0].amountAsNumber}`
             }
         })
 

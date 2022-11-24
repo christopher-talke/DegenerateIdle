@@ -4,8 +4,9 @@ import { discord } from '../../../discord/bot';
 import { CONFIG } from '../../../config';
 import { TRANSFER_FUNDS } from '../logic/bank';
 import logger from '../../../utils/logger';
-import { BankAccount } from '@prisma/client';
+
 import { formatMoney } from '../../../utils/utilities';
+import { BankAccountExt } from '../types/bank';
 
 discord.on('messageCreate', async (message : Message) => {
     const [cmd] = message.content.split(' ');
@@ -23,13 +24,13 @@ discord.on('messageCreate', async (message : Message) => {
     }
 });
 
-export async function TRANSFER_MESSAGE_COMPLETE(message: Message, transferAmount: number, sourceAccount: BankAccount, targetAccount: BankAccount, playerToPlayer: boolean = false) {
+export async function TRANSFER_MESSAGE_COMPLETE(message: Message, transferAmount: number, sourceAccount: BankAccountExt, targetAccount: BankAccountExt, playerToPlayer: boolean = false) {
 
     let messageToSend = '\n\n**Transfer Complete**\n' + 
                           '```\n' +
                           `Transfer Amount:        ${formatMoney(transferAmount)}\n` + 
-                          `Source Account:         ${formatMoney(sourceAccount.amount)}\n` + 
-                          `Target Account:         ${formatMoney(targetAccount.amount)}\n` + 
+                          `Source Account:         ${formatMoney(sourceAccount.amountAsNumber)}\n` + 
+                          `Target Account:         ${formatMoney(targetAccount.amountAsNumber)}\n` + 
                           '```';
 
     if (playerToPlayer) {

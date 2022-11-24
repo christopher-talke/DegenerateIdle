@@ -14,12 +14,12 @@ export async function REGISTER_PLAYER(discordId: string, discordUsername: string
                             name : 'Spendings',
                             status : "OPEN",
                             type : "SPENDINGS",
-                            amount : 100000,
+                            amount : `100000`,
                         },{
                             name : 'Savings',
                             status : "OPEN",
                             type : "SAVINGS",
-                            amount : 0,
+                            amount : `0`,
                         }]
                     }
                 }

@@ -55,7 +55,7 @@ async function GET_PLAYER_INFO(discordMessage: Message, anotherPlayer: boolean =
         const bankAccount = player.BankAccount[i];
         t.cell('#', bankAccount.id);
         t.cell('Type', bankAccount.type);
-        t.cell('Amount', formatMoney(bankAccount.amount));
+        t.cell('Amount', formatMoney(bankAccount.amountAsNumber));
         t.newRow();
     }
 

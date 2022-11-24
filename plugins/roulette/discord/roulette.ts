@@ -127,10 +127,13 @@ export function GENERATE_PLAYER_BETS() {
         t.cell('#', betByPlayer.id);
         t.cell('Player', player?.name);
         t.cell('Bet', BETTING_TRANSLATIONS[betByPlayer.bet]);
-        t.cell('Amount', formatMoney(betByPlayer.amount));
-        t.cell('Potential', formatMoney(betByPlayer.amount * BETTING_PAYOUTS[betByPlayer.bet]));
+        t.cell('Amount', formatMoney(betByPlayer.amountAsNumber));
+        t.cell('Potential', formatMoney(betByPlayer.amountAsNumber * BETTING_PAYOUTS[betByPlayer.bet]));
+        t.cell('Status', betByPlayer.state);
+
+        t.newRow();
     }
-    
+
     if (betsByPlayer.length > 0) return t.toString();
 
     return 'No Player Bets Yet...';
@@ -143,7 +146,7 @@ export function GENERATE_PLAYERS() {
         t.cell('#', player.id);
         t.cell('Player', player?.name);
 
-        t.cell('Available Funds', formatMoney(player.BankAccount[0].amount));
+        t.cell('Available Funds', formatMoney(player.BankAccount[0].amountAsNumber));
         if (player.fundsAtRisk && !ROULETTE_ROUND?.winningNumber) {
             t.cell('Funds At Risk', formatMoney(player.fundsAtRisk));
         }

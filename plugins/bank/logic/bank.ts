@@ -4,7 +4,7 @@ import logger from "../../../utils/logger";
 import { formatMoney, handleFloat } from "../../../utils/utilities";
 import { ROULETTE_PLAYERS } from "../../roulette/logic";
 import { BANK_TRANSFER_ENUM, TRANSFER_MESSAGE_COMPLETE, TRANSFER_MESSAGE_ERROR } from "../discord/bank";
-
+import { BankAccountExt } from "../types/bank";
 
 export async function BANK_ACCOUNT_ADD_FUNDS(accountId : number, amountToAdd: number) {
 
@@ -15,26 +15,26 @@ export async function BANK_ACCOUNT_ADD_FUNDS(accountId : number, amountToAdd: nu
             where: {
                 id: accountId
             },
-        })
+        }) as BankAccountExt
 
         if (accountToUpdate === null) {
             logger.error(`The account (ID ${accountId}) could not be found.`)
             return null;
         };
         
-        let newAmount = accountToUpdate.amount + amountToAdd;
+        let newAmount = accountToUpdate.amountAsNumber + amountToAdd;
 
-        logger.info(`Updating bank account amount from (AMOUNT ${accountToUpdate.amount}) to (AMOUNT ${newAmount}).`);
+        logger.info(`Updating bank account amount from (AMOUNT ${accountToUpdate.amountAsNumber}) to (AMOUNT ${newAmount}).`);
         const updatedAccount = await prisma.bankAccount.update({
             where: {
                 id: accountId
             },
             data : {
-                amount : newAmount
+                amount : `${newAmount}`
             }
-        })
+        }) as BankAccountExt
         
-        logger.info(`Succesfully updated account (ID ${accountId}), new amount (AMOUNT ${updatedAccount.amount}) has been processed.`);
+        logger.info(`Succesfully updated account (ID ${accountId}), new amount (AMOUNT ${accountToUpdate.amountAsNumber}) has been processed.`);
         return updatedAccount
     } 
     
@@ -55,25 +55,25 @@ export async function BANK_ACCOUNT_REMOVE_FUNDS(accountId : number, amountToRemo
             where: {
                 id: accountId
             },
-        })
+        }) as BankAccountExt
 
         if (accountToUpdate === null) {
             logger.error(`The account (ID ${accountId}) could not be found.`)
             return null;
         };
         
-        let newAmount = accountToUpdate.amount - amountToRemove;
-        logger.info(`Updating bank account amount from (AMOUNT ${accountToUpdate.amount}) to (AMOUNT ${newAmount}).`);
+        let newAmount = accountToUpdate.amountAsNumber - amountToRemove;
+        logger.info(`Updating bank account amount from (AMOUNT ${accountToUpdate.amountAsNumber}) to (AMOUNT ${newAmount}).`);
         const updatedAccount = await prisma.bankAccount.update({
             where: {
                 id: accountId
             },
             data : {
-                amount : newAmount
+                amount : `${newAmount}`
             }
-        })
+        }) as BankAccountExt
         
-        logger.info(`Succesfully updated account (ID ${accountId}), new amount (AMOUNT ${updatedAccount.amount}) has been processed..`);
+        logger.info(`Succesfully updated account (ID ${accountId}), new amount (AMOUNT ${updatedAccount.amountAsNumber}) has been processed..`);
         return updatedAccount
     } 
     
@@ -135,14 +135,14 @@ async function PLAYER_TRANSFER(message: Message) {
                 },
                 type : 'SPENDINGS'
             }
-        });
+        }) as BankAccountExt
 
         if (!sourceBankAccount) {
             logger.error(`Source account for '${message.author.username}' could not be found.`);
             await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.ACCOUNT_NOT_FOUND, `Spendings account for '${message.author.username}' could not be found.`);
             return;
         };
-        if (sourceBankAccount.amount < transferAmount) {
+        if (sourceBankAccount.amountAsNumber < transferAmount) {
             logger.error(`Source account for '${message.author.username}' did not have sufficent funds to complete this transfer.`);
             await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.INSUFFICENT_FUNDS, `It looks like you do not have sufficent funds to complete this transfer.`);
             return;
@@ -156,7 +156,7 @@ async function PLAYER_TRANSFER(message: Message) {
                 },
                 type : 'SPENDINGS'
             }
-        });
+        }) as BankAccountExt
 
         if (!targetBankAccount) {
             logger.error(`Target account for '${message.mentions.users.first()?.username}' could not be found.`);
@@ -164,18 +164,14 @@ async function PLAYER_TRANSFER(message: Message) {
             return;
         };
 
-        // Complete Transfer
-        sourceBankAccount.amount = sourceBankAccount.amount - transferAmount;
-        targetBankAccount.amount = targetBankAccount.amount + transferAmount;
-
-        // Write Transfer to Database
+        // Complete the Transfer
         await BANK_ACCOUNT_REMOVE_FUNDS(sourceBankAccount.id, transferAmount);
         await BANK_ACCOUNT_ADD_FUNDS(targetBankAccount.id, transferAmount);
 
         // Write Transaction to Database
         await prisma.bankAccountTransaction.create({
             data: {
-                amount : transferAmount,
+                amount : `${transferAmount}`,
                 Player : {
                     connect: {
                         id: sourceBankAccount.playerId
@@ -222,7 +218,7 @@ async function ACCOUNT_TRANSFER(message: Message) {
             where: {
                 id: Number(sourceAccount)
             }
-        });
+        }) as BankAccountExt
 
         
         if (!sourceBankAccount) {
@@ -231,7 +227,7 @@ async function ACCOUNT_TRANSFER(message: Message) {
             return;
         };
         
-        if (sourceBankAccount.amount < transferAmount) {
+        if (sourceBankAccount.amountAsNumber < transferAmount) {
             logger.error(`Source account '${targetAccount}' did not have sufficent funds to complete this transfer.`);
             await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.INSUFFICENT_FUNDS, `It looks like you do not have sufficent funds to complete this transfer.`);
             return;
@@ -242,7 +238,7 @@ async function ACCOUNT_TRANSFER(message: Message) {
             where: {
                 id: Number(targetAccount)
             }
-        });
+        }) as BankAccountExt
 
         if (!targetBankAccount) {
             logger.error(`Target account '${targetAccount}' could not be found.`);
@@ -251,8 +247,8 @@ async function ACCOUNT_TRANSFER(message: Message) {
         };
 
         // Complete Transfer
-        sourceBankAccount.amount = sourceBankAccount.amount - transferAmount;
-        targetBankAccount.amount = targetBankAccount.amount + transferAmount;
+        sourceBankAccount.amountAsNumber = sourceBankAccount.amountAsNumber - transferAmount;
+        targetBankAccount.amountAsNumber = targetBankAccount.amountAsNumber + transferAmount;
 
         // Write Transfer to Database
         await BANK_ACCOUNT_REMOVE_FUNDS(sourceBankAccount.id, transferAmount);
@@ -261,7 +257,7 @@ async function ACCOUNT_TRANSFER(message: Message) {
         // Write Transaction to Database
         await prisma.bankAccountTransaction.create({
             data: {
-                amount : transferAmount,
+                amount : `${transferAmount}`,
                 Player : {
                     connect: {
                         id: sourceBankAccount.playerId

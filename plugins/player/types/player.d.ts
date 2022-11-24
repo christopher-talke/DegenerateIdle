@@ -1,7 +1,8 @@
-import { BankAccount, Player } from "@prisma/client";
-
+import { Player } from "@prisma/client";
+import { BankAccountExt } from '../../bank/types/bank'
 export interface RoulettePlayer extends Player {
-    BankAccount : BankAccount[];
+    amountAsNumber : number,
+    BankAccount : BankAccountExt[];
     fundsAtRisk : number?;
     previousPosition: number?;
     newPosition: number?;
