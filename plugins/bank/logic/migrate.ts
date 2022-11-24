@@ -1,14 +1,14 @@
 import { prisma } from "../../../prisma/client"
 import logger from "../../../utils/logger";
 
-
 const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
+    logger.section('Starting PLAYER_TO_ACCOUNT migration...')
 
     try {
-        
         const players = await prisma.player.findMany();
         if (players.length === 0) return;
 
+        logger.info(`There was a total of '${players.length}' pulled from the database.`)
         for (let i = 0; i < players.length; i++) {
             const player = players[i];
 
@@ -20,6 +20,7 @@ const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
 
             if (playersAccounts.length === 0) {
 
+                logger.info(`Player (ID ${player.id}) did not have bank accounts, creating them now...`)
                 await prisma.bankAccount.create({
                     data : {
                         name : 'Spendings',
@@ -48,6 +49,10 @@ const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
                     }
                 })
 
+                logger.info(`Player (ID ${player.id}) now has new bank accounts...`)
+
+            } else {
+                logger.info(`Player (ID ${player.id}) already has the necessary accounts...`)
             }
             
         }
@@ -59,6 +64,8 @@ const MIGRATE_FROM_PLAYER_TO_ACCOUNT = async () => {
         logger.info('There was an issue moving player funds from Player Entity to Bank Accounts.')
     }
 
+
+    logger.section('Finished PLAYER_TO_ACCOUNT migration...')
 }
 
 MIGRATE_FROM_PLAYER_TO_ACCOUNT();
