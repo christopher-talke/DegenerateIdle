@@ -18,6 +18,7 @@ RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 WORKDIR /home/node/app
 COPY package*.json ./
 RUN npm install --production
+ENV TZ="Australia/Sydney"
 COPY --from=builder /home/node/app/dist ./dist
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma

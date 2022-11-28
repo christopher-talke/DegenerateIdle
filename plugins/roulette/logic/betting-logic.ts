@@ -50,7 +50,7 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
     // Validate the bet
 
     if (typeof bettingData.amount === 'string') bettingData.amount = bettingData.amount.replace(/[\$\,]/gi, '');
-    if (Number(bettingData.amount) !== NaN) bettingData.amount = handleFloat(bettingData.amount);
+    if (Number(bettingData.amount) > 0) bettingData.amount = handleFloat(bettingData.amount);
     
     const isValidBet = VALIDATE_ROULETTE_BET(bettingData);
     logger.info(`Players (ID '${discordUserId}') bet validity is '${isValidBet}'.`);

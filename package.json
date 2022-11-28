@@ -36,6 +36,7 @@
         "easy-table": "^1.2.0",
         "ioredis": "^5.2.4",
         "lodash": "^4.17.21",
+        "moment": "^2.29.4",
         "node-cron": "^3.0.2"
     }
 }

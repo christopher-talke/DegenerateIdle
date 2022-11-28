@@ -1,4 +1,5 @@
 import { Message } from 'discord.js';
+import moment from 'moment'
 
 import { prisma } from '../../../prisma/client';
 import { redis } from '../../../redis/client';
@@ -80,7 +81,6 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
             }
         })
 
-        const currentTime = new Date()
         await redis.set(`wonderwheel-${discordMessage.author.id}`, 1, 'EX', 3600);
         await SEND_DISCORD_MESSAGE(
             { discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId },
@@ -89,7 +89,7 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
             `Multiplier:             x${randomMultiplier}\n` +
             `Winning Amount:         ${formatMoney(winningAmount)}\n` +
             '```\n' +
-            `You'll be able to play again at around '${currentTime.getHours() + 1}:${currentTime.getMinutes()}'!`
+            `You'll be able to play again at ${moment().add(1, 'hour').format('h:mm a')}`
         );
     } else {
         await SEND_DISCORD_MESSAGE({ discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId }, `uhhh... looks like there was a problem playing the wonderwheel, sorry!`);
