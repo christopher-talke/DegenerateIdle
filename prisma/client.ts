@@ -12,28 +12,34 @@ prisma.$use(async (params, next) => {
         const modelWhitelist = [ "Player", "RoulettePlayerBet", "WonderwheelPlay", "BankAccount", "BankAccountTransaction" ];
         if (params.model && modelWhitelist.includes(params.model)) {
 
-            let result = await next(params)
+            let result = await next(params);
             if (Array.isArray(result) && result.length > 0) {
                 for (let i = 0; i < result.length; i++) {
-                    let payload = result[i]
-                    payload.amountAsNumber = Number(payload.z_availableFunds || payload.amount)
+                    let payload = result[i];
+                    if (payload) {
 
-                    Object.keys(payload).forEach(key => {
-                        if (modelWhitelist.includes(key)) {
-                            (innerConvert(payload[key]))
-                        }
-                    })
+                        payload.amountAsNumber = Number(payload.amount)
+                        
+                        Object.keys(payload).forEach(key => {
+                            if (modelWhitelist.includes(key)) {
+                                (innerConvert(payload[key]))
+                            }
+                        })
+                        
+                    }
 
                 }
             } 
             
             else {
-                result.amountAsNumber = Number(result.z_availableFunds || result.amount)
-                Object.keys(result).forEach(key => {
-                    if (modelWhitelist.includes(key)) {
-                        (innerConvert(result[key]))
-                    }
-                })
+                if (result) {
+                    result.amountAsNumber = Number(result.amount)
+                    Object.keys(result).forEach(key => {
+                        if (modelWhitelist.includes(key)) {
+                            (innerConvert(result[key]))
+                        }
+                    })
+                }
             }
 
             return result
