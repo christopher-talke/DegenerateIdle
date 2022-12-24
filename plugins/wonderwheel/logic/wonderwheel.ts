@@ -81,7 +81,8 @@ export async function PLAY_WONDERWHEEL(discordMessage: Message) {
             }
         })
 
-        await redis.set(`wonderwheel-${discordMessage.author.id}`, 1, 'EX', 3600);
+        // await redis.set(`wonderwheel-${discordMessage.author.id}`, 1, 'EX', 3600);
+        await redis.set(`wonderwheel-${discordMessage.author.id}`, 1, 'EX', 900);
         await SEND_DISCORD_MESSAGE(
             { discordUserId: discordMessage.author.id, targetChannelKey: 'WONDERWHEEL_CHANNEL_ID', guildId: discordMessage.guildId },
             'see your results below:\n```' + 
