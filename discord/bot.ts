@@ -1,4 +1,4 @@
-import { CategoryChannel, ChannelType, Client } from 'discord.js';
+import { Client } from 'discord.js';
 import { CONFIG } from '../config';
 
 const discord = new Client({ intents: [...CONFIG.DISCORD_BOT.INTENTS] });
