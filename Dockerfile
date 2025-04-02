@@ -4,7 +4,6 @@ RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 WORKDIR /home/node/app
 COPY ./prisma prisma
 COPY package*.json ./
-RUN npm config set unsafe-perm true
 RUN npm install -g typescript
 RUN npm install -g ts-node
 RUN npm install
