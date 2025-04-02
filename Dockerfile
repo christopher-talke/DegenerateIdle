@@ -1,6 +1,10 @@
 # STAGE 1
 FROM node:18-alpine as builder
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
+
+# Install OpenSSL libraries needed by Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /home/node/app
 COPY ./prisma prisma
 COPY package*.json ./
@@ -14,6 +18,10 @@ RUN npm run tsc
 # STAGE 2
 FROM node:18-alpine
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
+
+# Install OpenSSL libraries needed by Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /home/node/app
 COPY package*.json ./
 RUN npm install --production
