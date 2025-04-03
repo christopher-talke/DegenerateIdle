@@ -19,7 +19,19 @@ COPY package*.json ./
 RUN npm install --production
 ENV TZ="Australia/Sydney"
 COPY --from=builder /home/node/app/dist ./dist
+COPY --from=builder /home/node/app/prisma ./prisma
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma
 
-CMD [ "node", "dist/index.js"]
+# Create a startup script
+COPY --chown=node:node <<EOT /home/node/app/start.sh
+#!/bin/sh
+echo "Running database migrations..."
+npx prisma migrate deploy
+echo "Starting application..."
+exec node dist/index.js
+EOT
+
+RUN chmod +x /home/node/app/start.sh
+
+CMD [ "/home/node/app/start.sh" ]
