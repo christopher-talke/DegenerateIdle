@@ -10,6 +10,7 @@ import { PROCESS_ROULETTE_BET, JOIN_PLAYER_TO_ROULETTE_ROUND } from '../logic/be
 import IMPORTED_BETTING_PAYOUTS from '../logic/mapping/betting_payouts.json';
 import IMPORTED_BETTING_TRANSLATIONS from '../logic/mapping/betting_translation.json';
 import logger from '../../../utils/logger';
+import { RoulettePlayerPlayState } from '@prisma/client';
 
 interface BettingOptions {
     [key: string]: number;
@@ -109,16 +110,37 @@ export async function DUMP_TO_HISTORY() {
                    '```\n';
     }
 
+    let winningBetsMessage = ``;
+    const winningBets = ROULETTE_ROUND_BETS.filter((bet) => bet.state === RoulettePlayerPlayState.WON);
+    if (winningBets.length > 0) {
+        winningBetsMessage += `**Winning Bets**\n` +
+                   '```\n' +
+                   `${GENERATE_PLAYER_BETS(true)}\n` +
+                   '```\n';
+    }
+
     for (let i = 0; i < ROULLETE.GUILDS.length; i++) {
         const GUILD = ROULLETE.GUILDS[i];
-        const TargetedChannel = (await discord.channels.fetch(GUILD.HISTORY_CHANNEL_ID)) as any;
-        await TargetedChannel.send(`https://files.talke.dev/roulette/result-${ROULETTE_ROUND?.winningNumber}.png`);
-        await TargetedChannel.send(message);
+
+        if (winningBetsMessage.length > 0) {
+            const TargetedChannel = (await discord.channels.fetch(GUILD.WINNINGS_CHANNEL_ID)) as any;
+            await TargetedChannel.send(`https://files.talke.dev/roulette/result-${ROULETTE_ROUND?.winningNumber}.png`);
+            await TargetedChannel.send(winningBetsMessage);
+        } 
+        
+        else {
+            const TargetedChannel = (await discord.channels.fetch(GUILD.HISTORY_CHANNEL_ID)) as any;
+            await TargetedChannel.send(`https://files.talke.dev/roulette/result-${ROULETTE_ROUND?.winningNumber}.png`);
+            await TargetedChannel.send(message);
+        }
     }
 }
 
-export function GENERATE_PLAYER_BETS() {
-    const betsByPlayer = _.sortBy(ROULETTE_ROUND_BETS, 'playerId');
+export function GENERATE_PLAYER_BETS(winningBets: boolean = false) {
+    let betsByPlayer = _.sortBy(ROULETTE_ROUND_BETS, 'playerId');
+
+    if (winningBets) betsByPlayer = betsByPlayer.filter((bet) => bet.state === RoulettePlayerPlayState.WON);
+
     const t = new Table();
 
     for (let i = 0; i < betsByPlayer.length; i++) {
