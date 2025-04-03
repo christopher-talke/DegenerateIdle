@@ -23,4 +23,4 @@ COPY --from=builder /home/node/app/prisma ./prisma
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma
 
-CMD [ "npx prisma migrate deploy", "&&", "exec node dist/index.js" ]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
