@@ -71,7 +71,10 @@ discord.on('messageCreate', async (message) => {
     const [cmd] = message.content.split(' ');
     const { guildId, channelId } = message;
 
+    console.log(guildId, channelId)
+
     const targetGuild = CONFIG.DISCORD_BOT.PLUGINS.ROULLETE.GUILDS.find((registeredGuild) => registeredGuild.GUILD_ID === guildId);
+    console.log('targetGuild', targetGuild)
     if (targetGuild) {
         const { BETTING_CHANNEL_ID, WONDERWHEEL_CHANNEL_ID, BANKING_CHANNEL_ID } = targetGuild;
 

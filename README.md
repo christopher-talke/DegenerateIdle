@@ -31,10 +31,21 @@ Setup your local `Postgres Development Database` using Docker 🐋
 
 ```sh
 docker run --name pg_development \
-    -e POSTGRES_PASSWORD=postgres \
+    -e "POSTGRES_PASSWORD=postgres" \
     -p 5432:5432 \
     -d --restart unless-stopped \
     postgres
+```
+
+Optionally you can also create a `PGAdmin` server using Docker 🐋
+
+```sh
+docker run --name pgadmin4 \
+    -e "PGADMIN_DEFAULT_EMAIL=chris@talketech.com.au" \
+    -e "PGADMIN_DEFAULT_PASSWORD=Password#1" \
+    -p 5050:80 \
+    -d --restart unless-stopped \
+    dpage/pgadmin4
 ```
 
 Setup your local `Redis Development Cache` using Docker 🐋
