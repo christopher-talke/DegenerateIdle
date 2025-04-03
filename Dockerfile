@@ -22,7 +22,5 @@ COPY --from=builder /home/node/app/dist ./dist
 COPY --from=builder /home/node/app/prisma ./prisma
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /home/node/app/start.sh ./start.sh
-RUN chmod +x /home/node/app/start.sh
 
-CMD [ "/home/node/app/start.sh" ]
+CMD [ "npx prisma migrate deploy", "&&", "exec node dist/index.js" ]
