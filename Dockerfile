@@ -22,16 +22,7 @@ COPY --from=builder /home/node/app/dist ./dist
 COPY --from=builder /home/node/app/prisma ./prisma
 COPY --from=builder /home/node/app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /home/node/app/node_modules/@prisma ./node_modules/@prisma
-
-# Create a startup script
-COPY --chown=node:node <<EOT /home/node/app/start.sh
-#!/bin/sh
-echo "Running database migrations..."
-npx prisma migrate deploy
-echo "Starting application..."
-exec node dist/index.js
-EOT
-
+COPY --from=builder /home/node/app/start.sh ./start.sh
 RUN chmod +x /home/node/app/start.sh
 
 CMD [ "/home/node/app/start.sh" ]
