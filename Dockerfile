@@ -1,10 +1,6 @@
 # STAGE 1
 FROM node:18 as builder
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
-
-# Install OpenSSL libraries needed by Prisma
-RUN apk add --no-cache openssl
-
 WORKDIR /home/node/app
 COPY ./prisma prisma
 COPY package*.json ./
