@@ -228,39 +228,27 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
         return;
     }
 
-    const lastRouletteRound = await prisma.playerOnRoulettePlay.findFirst({
+    let lastBets = await prisma.roulettePlayerBet.findMany({
         where: {
             playerId: playerData.id
         },
         orderBy: {
             createdAt: 'desc'
         }
-    }) as RoulettePlayer | null
-    if (lastRouletteRound === null) {
-        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `You don't have any bets to repeat.`);
-        return;
-    }
-
-    const lastBets = await prisma.roulettePlayerBet.findMany({
-        where: {
-            playerId: playerData.id,
-            roulettePlayId: lastRouletteRound.id
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
     }) as RoulettePlayerBetExt[] | null
+    let betsGroupedByRouletteRound = _.groupBy(lastBets, 'roulettePlayId')
+    let mostRecentRoundsBets = betsGroupedByRouletteRound[_.keys(betsGroupedByRouletteRound)[0]];
 
-    const totalBetAmount = lastBets?.reduce((acc, bet) => acc + Number(bet.amount), 0) || 0;
+    const totalBetAmount = mostRecentRoundsBets?.reduce((acc, bet) => acc + Number(bet.amount), 0) || 0;
     if (totalBetAmount > playerData.BankAccount[0].amountAsNumber) {
         await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `You do not have enough funds to repeat your last bet(s).`);
         return;
     }
 
-    if (lastBets !== null) {
+    if (mostRecentRoundsBets !== null) {
 
-        for (let i = 0; i < lastBets.length; i++) {
-            const bet = lastBets[i];
+        for (let i = 0; i < mostRecentRoundsBets.length; i++) {
+            const bet = mostRecentRoundsBets[i];
             const bettingData = {
                 amount: bet.amount,
                 bet: bet.bet
