@@ -199,3 +199,74 @@ async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bett
         return;
     }
 }
+
+export async function REPEAT_LAST_BET(discordMessage: Message) {
+
+    const playerData = await prisma.player.findFirst({
+        where: {
+            discordId: discordMessage.author.id,
+        },
+        include: {
+            BankAccount: {
+                where: {
+                    type: 'SPENDINGS'
+                }
+            }
+        }
+    }) as RoulettePlayer | null;
+
+    if (playerData === null) {
+        const playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordMessage.author.id, discordMessage);
+        if (playerData) {
+            await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: discordMessage.author.id, guildId: discordMessage.guildId }, `You didn't have a bet to repeat, but you have now been registered, we've gifted you $1,000 to start playing with!`);
+        } 
+        
+        else {
+            await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: discordMessage.author.id, guildId: discordMessage.guildId }, `You didn't have a bet to repeat, and we couldn't register you, please try again later.`);
+        }
+
+        return;
+    }
+
+    const lastRouletteRound = await prisma.playerOnRoulettePlay.findFirst({
+        where: {
+            playerId: playerData.id
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    }) as RoulettePlayer | null
+
+    const lastBets = await prisma.roulettePlayerBet.findMany({
+        where: {
+            playerId: playerData.id,
+            roulettePlayId: lastRouletteRound?.id
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    }) as RoulettePlayerBetExt[] | null
+
+    const totalBetAmount = lastBets?.reduce((acc, bet) => acc + Number(bet.amount), 0) || 0;
+
+    if (totalBetAmount > playerData.BankAccount[0].amountAsNumber) {
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `You do not have enough funds to repeat your last bet(s).`);
+    }
+
+    if (lastBets !== null) {
+
+        for (let i = 0; i < lastBets.length; i++) {
+            const bet = lastBets[i];
+            const bettingData = {
+                amount: bet.amount,
+                bet: bet.bet
+            } as bettingDataToBeProcessed
+
+            await PROCESS_ROULETTE_BET(discordMessage, bettingData);
+        }
+    }
+    
+    else {
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: discordMessage.channelId, discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `Could not find any bet(s) to repeat.`);
+    }
+}

@@ -210,10 +210,12 @@ discord.on('messageCreate', async (message) => {
 
         if (cmd === '!gamble') {
             const [amount, bet] = rest;
-            PROCESS_ROULETTE_BET(message, {
-                amount,
-                bet,
-            });
+            PROCESS_ROULETTE_BET(message, { amount, bet });
+        }
+
+        // Command to save bet template
+        if (cmd === '!repeat') {
+            REPEAT_LAST_BET(message);
         }
 
         if (cmd === '!dump') {
