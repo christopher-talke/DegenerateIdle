@@ -5,6 +5,7 @@ import { formatMoney, handleFloat } from "../../../utils/utilities";
 import { ROULETTE_PLAYERS } from "../../roulette/logic";
 import { BANK_TRANSFER_ENUM, TRANSFER_MESSAGE_COMPLETE, TRANSFER_MESSAGE_ERROR } from "../discord/bank";
 import { BankAccountExt } from "../types/bank";
+import { BankAccountType } from "@prisma/client";
 
 export async function BANK_ACCOUNT_ADD_FUNDS(accountId : number, amountToAdd: number) {
 
@@ -287,3 +288,142 @@ async function ACCOUNT_TRANSFER(message: Message) {
     }
 }
 
+export async function PROCESS_LOAN_REQUEST(message: Message) {
+
+    const [ _cmd, amount ] = message.content.split(' ');
+    const loanAmount = handleFloat(amount) * 100;
+    if (loanAmount > 0) {
+        logger.info(`Starting a loan request for an amount of '${formatMoney(loanAmount)}' (RAW AMOUNT '${loanAmount}').`);
+
+        const player = await prisma.player.findFirst({
+            where: {
+                discordId: message.author.id  
+            }
+        });
+
+        // Get the target bank account
+        const targetBankAccount = await prisma.bankAccount.findFirst({
+            where: {
+                Player: {
+                    discordId: message.mentions.users.first()?.id 
+                },
+                type : 'SPENDINGS'
+            }
+        }) as BankAccountExt
+
+        if (!targetBankAccount) {
+            logger.error(`Target account for '${message.mentions.users.first()?.username}' could not be found.`);
+            await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.ACCOUNT_NOT_FOUND, `Spendings account for '${message.mentions.users.first()?.username}' could not be found.`);
+            return;
+        };
+
+        // Complete the Transfer
+        await BANK_ACCOUNT_ADD_FUNDS(targetBankAccount.id, loanAmount);
+
+        let loanAccount = await prisma.bankAccount.findFirst({
+            where: {
+                Player: {
+                    discordId: message.author.id  
+                },
+                type : BankAccountType.LOAN
+            }
+        }) as BankAccountExt
+
+        if (!loanAccount) {
+            loanAccount = await prisma.bankAccount.create({
+                data: {
+                    Player: {
+                        connect: {
+                            id: player?.id
+                        }
+                    },
+                    type: BankAccountType.LOAN,
+                    amount: `${loanAmount}`
+                }
+            }) as BankAccountExt
+        }
+
+        else {
+
+            if (loanAccount.amountAsNumber < -10000) {
+                await prisma.bankAccount.update({
+                    where: {
+                        id: loanAccount.id
+                    },
+                    data: {
+                        amount: `${loanAccount.amountAsNumber + loanAmount}`
+                    }
+                }) as BankAccountExt;
+            } 
+            
+            else {
+                await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.LOAN_MAXED, `It looks like you've maxed out your line of credit, you need to payback what you owe first.`);
+                return;
+            }
+
+        }
+
+    }
+}
+
+export async function PROCESS_LOAN_REPAYMENT(message: Message) {
+
+    const [ _cmd, amount ] = message.content.split(' ');
+    const loanAmount = handleFloat(amount) * 100;
+    if (loanAmount < 0) {
+        logger.info(`Starting a loan repayment for an amount of '${formatMoney(loanAmount)}' (RAW AMOUNT '${loanAmount}').`);
+
+        // Get the source bank account
+        const sourceBankAccount = await prisma.bankAccount.findFirst({
+            where: {
+                Player: {
+                    discordId: message.author.id  
+                },
+                type : 'SPENDINGS'
+            }
+        }) as BankAccountExt
+
+        // Get the target bank account
+        const targetBankAccount = await prisma.bankAccount.findFirst({
+            where: {
+                Player: {
+                  discordId: message.author.id  
+                },
+                type : BankAccountType.LOAN
+            }
+        }) as BankAccountExt
+
+        if (!targetBankAccount) {
+            logger.error(`Target account for '${message.author.username}' could not be found.`);
+            await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.ACCOUNT_NOT_FOUND, `Spendings account for '${message.author.username}' could not be found.`);
+            return;
+        };
+
+        // Complete the Transfer
+        await BANK_ACCOUNT_REMOVE_FUNDS(sourceBankAccount.id, loanAmount);
+        await BANK_ACCOUNT_ADD_FUNDS(targetBankAccount.id, loanAmount);
+
+        await prisma.bankAccountTransaction.create({
+            data: {
+                amount : `${loanAmount}`,
+                Player : {
+                    connect: {
+                        id: sourceBankAccount.playerId
+                    }
+                },
+                SourceAccount : {
+                    connect : {
+                        id: sourceBankAccount.id
+                    }
+                },
+                TargetAccount: {
+                    connect : {
+                        id: targetBankAccount.id
+                    }
+                },
+            }
+        })
+
+        await TRANSFER_MESSAGE_COMPLETE(message, loanAmount, sourceBankAccount, targetBankAccount, false);
+    }
+}

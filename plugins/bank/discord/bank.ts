@@ -2,7 +2,7 @@ import { Message } from 'discord.js';
 
 import { discord } from '../../../discord/bot';
 import { CONFIG } from '../../../config';
-import { TRANSFER_FUNDS } from '../logic/bank';
+import { PROCESS_LOAN_REQUEST, TRANSFER_FUNDS, PROCESS_LOAN_REPAYMENT } from '../logic/bank';
 import logger from '../../../utils/logger';
 
 import { formatMoney } from '../../../utils/utilities';
@@ -17,6 +17,12 @@ discord.on('messageCreate', async (message : Message) => {
         switch (cmd) {
             case '!transfer':
                 await TRANSFER_FUNDS(message)
+                break;
+            case '!loan':
+                await PROCESS_LOAN_REQUEST(message);
+                break;
+            case '!paybill':
+                await PROCESS_LOAN_REPAYMENT(message);
                 break;
             default:
                 break;
@@ -44,6 +50,7 @@ export enum BANK_TRANSFER_ENUM {
     INCORRECT_AMOUNT = 'INCORRECT_AMOUNT',
     ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND',
     INSUFFICENT_FUNDS = 'INSUFFICENT_FUNDS',
+    LOAN_MAXED = 'LOAN_MAXED',
     BUSY = 'BUSY',
 }
 
