@@ -354,6 +354,8 @@ export async function PROCESS_LOAN_REQUEST(message: Message) {
                         amount: `${loanAccount.amountAsNumber - loanAmount}` // Subtract to increase the debt
                     }
                 }) as BankAccountExt;
+
+                await TRANSFER_MESSAGE_COMPLETE(message, loanAmount, loanAccount, targetBankAccount, false)
             } 
             
             else {
@@ -401,6 +403,8 @@ export async function PROCESS_LOAN_REPAYMENT(message: Message) {
         // Complete the Transfer
         await BANK_ACCOUNT_REMOVE_FUNDS(sourceBankAccount.id, loanAmount);
         await BANK_ACCOUNT_ADD_FUNDS(targetBankAccount.id, loanAmount);
+
+        await TRANSFER_MESSAGE_COMPLETE(message, loanAmount, sourceBankAccount, targetBankAccount, false);
 
         await prisma.bankAccountTransaction.create({
             data: {
