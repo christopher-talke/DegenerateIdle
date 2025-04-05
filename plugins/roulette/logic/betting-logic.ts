@@ -241,7 +241,7 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
     let betsGroupedByRouletteRound = _.groupBy(lastBets, 'roulettePlayId')
     let mostRecentRoundsBets = betsGroupedByRouletteRound[mostRecentRoundId];
 
-    const totalBetAmount = mostRecentRoundsBets?.reduce((acc, bet) => acc + Number(bet.amount), 0) || 0;
+    const totalBetAmount = (mostRecentRoundsBets?.reduce((acc, bet) => acc + Number(bet.amountAsNumber), 0)) / 100 || 0;
     if (totalBetAmount > playerData.BankAccount[0].amountAsNumber) {
         await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `You do not have enough funds to repeat your last bet(s).`);
         return;
@@ -252,7 +252,7 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
         for (let i = 0; i < mostRecentRoundsBets.length; i++) {
             const bet = mostRecentRoundsBets[i];
             const bettingData = {
-                amount: bet.amount,
+                amount: bet.amountAsNumber / 100,
                 bet: bet.bet
             } as bettingDataToBeProcessed
 
