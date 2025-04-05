@@ -338,20 +338,20 @@ export async function PROCESS_LOAN_REQUEST(message: Message) {
                         }
                     },
                     type: BankAccountType.LOAN,
-                    amount: `${loanAmount}`
+                    amount: `-${loanAmount}` // Make the loan amount negative to represent debt
                 }
             }) as BankAccountExt
         }
 
         else {
-
-            if (loanAccount.amountAsNumber < -10000) {
+            // Check if adding this loan would exceed the maximum debt limit
+            if (loanAccount.amountAsNumber - loanAmount >= -10000) {
                 await prisma.bankAccount.update({
                     where: {
                         id: loanAccount.id
                     },
                     data: {
-                        amount: `${loanAccount.amountAsNumber + loanAmount}`
+                        amount: `${loanAccount.amountAsNumber - loanAmount}` // Subtract to increase the debt
                     }
                 }) as BankAccountExt;
             } 
@@ -360,7 +360,6 @@ export async function PROCESS_LOAN_REQUEST(message: Message) {
                 await TRANSFER_MESSAGE_ERROR(message, BANK_TRANSFER_ENUM.LOAN_MAXED, `It looks like you've maxed out your line of credit, you need to payback what you owe first.`);
                 return;
             }
-
         }
 
     }
