@@ -114,6 +114,7 @@ enum BankAccountType {
   SPENDINGS
   SAVINGS
   DEPOSIT
+  LOAN
 }
 
 enum BankAccountStatus {
