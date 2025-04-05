@@ -236,8 +236,10 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
             createdAt: 'desc'
         }
     }) as RoulettePlayerBetExt[] | null
+    let uniqueRounds = _.uniqBy(lastBets, 'roulettePlayId')
+    let mostRecentRoundId = uniqueRounds[0]?.roulettePlayId
     let betsGroupedByRouletteRound = _.groupBy(lastBets, 'roulettePlayId')
-    let mostRecentRoundsBets = betsGroupedByRouletteRound[_.keys(betsGroupedByRouletteRound)[0]];
+    let mostRecentRoundsBets = betsGroupedByRouletteRound[mostRecentRoundId];
 
     const totalBetAmount = mostRecentRoundsBets?.reduce((acc, bet) => acc + Number(bet.amount), 0) || 0;
     if (totalBetAmount > playerData.BankAccount[0].amountAsNumber) {
