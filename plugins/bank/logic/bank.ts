@@ -345,7 +345,7 @@ export async function PROCESS_LOAN_REQUEST(message: Message) {
 
         else {
             // Check if adding this loan would exceed the maximum debt limit
-            if (loanAccount.amountAsNumber - loanAmount >= -10000) {
+            if (loanAccount.amountAsNumber - loanAmount >= -100000) {
                 await prisma.bankAccount.update({
                     where: {
                         id: loanAccount.id
