@@ -102,13 +102,14 @@ async function START_ROULETTE() {
                 const playerWithRepeats = playersWithBetsToRepeat[i];
                 for (let j = 0; j < playerWithRepeats.betsToRepeat.length; j++) {
                     const bet = playerWithRepeats.betsToRepeat[j];
-                    await PROCESS_ROULETTE_BET(playerWithRepeats.playerId, playerWithRepeats.discordId, bet);                
+                    await PROCESS_ROULETTE_BET(playerWithRepeats.discordId, playerWithRepeats.guildId, bet);                
                 }
 
                 playerWithRepeats.roundsToRepeat = playerWithRepeats.roundsToRepeat - 1;
                 if (playerWithRepeats.roundsToRepeat <= 0) {
                     playersWithBetsToRepeat.splice(i, 1);
                 }
+                
             }
             
             await redis.set('roulette:repeat', JSON.stringify(playersWithBetsToRepeat));

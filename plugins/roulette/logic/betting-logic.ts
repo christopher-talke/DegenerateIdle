@@ -274,11 +274,12 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
     }
 
     if (betsToRepeat.length > 0) {
-        await redis.set(`roulette:repeat`, JSON.stringify([{
+        await redis.set('roulette:repeat', JSON.stringify([{
             betsToRepeat: betsToRepeat,
             roundsToRepeat: roundsToRepeatAsNumber - 1,
             playerId: playerData.id,
-            discordId: discordMessage.author.id
+            discordId: discordMessage.author.id,
+            guildId: discordMessage.guildId as string,
         }]));
     }
 }

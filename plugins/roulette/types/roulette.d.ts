@@ -9,4 +9,5 @@ export type RepeatBet = {
     roundsToRepeat: number;
     playerId: string;
     discordId: string;
+    guildId: string;
 }
