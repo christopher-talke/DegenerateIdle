@@ -204,13 +204,13 @@ discord.on('messageCreate', async (message) => {
     const targetGuild = CONFIG.DISCORD_BOT.PLUGINS.ROULLETE.GUILDS.find((registeredGuild) => registeredGuild.GUILD_ID === guildId);
     if (channelId === targetGuild?.BETTING_CHANNEL_ID) {
         if (cmd === '!join') {
-            await JOIN_PLAYER_TO_ROULETTE_ROUND(author.id, message);
+            await JOIN_PLAYER_TO_ROULETTE_ROUND(author.id, guildId as string, author.username);
             logger.info(`Player (ID '${author.id}') has been registered against this round.`);
         }
 
         if (cmd === '!gamble') {
             const [amount, bet] = rest;
-            PROCESS_ROULETTE_BET(message, { amount, bet });
+            PROCESS_ROULETTE_BET(author.id, guildId as string, { amount, bet });
         }
 
         // Command to save bet template
