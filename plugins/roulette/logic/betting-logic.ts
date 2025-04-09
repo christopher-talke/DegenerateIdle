@@ -16,6 +16,7 @@ import { REGISTER_PLAYER } from '../../player/logic/registerPlayer';
 import { RoulettePlayer } from '../../player/types/player';
 import { handleFloat } from '../../../utils/utilities';
 import { RoulettePlayerBetExt } from '../types/roulette';
+import { redis } from '../../../redis/client';
 
 const BETTING_OPTIONS: BettingOptions = {
     ...IMPORTED_BETTING_OPTIONS,
@@ -30,19 +31,15 @@ interface BettingOptions {
     [key: string]: number[];
 }
 
-export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData: bettingDataToBeProcessed): Promise<void> {
-
-    const {
-        author: { id: discordUserId },
-    } = discordMessage;
+export async function PROCESS_ROULETTE_BET(discordUserId: string, guildId: string, bettingData: bettingDataToBeProcessed): Promise<void> {
 
     if (ROULETTE_ROUND === null) {
-        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, 'there is currently no active roulette round, please try again soon.');
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, 'there is currently no active roulette round, please try again soon.');
         return;
     }
 
     if (ROULETTE_ROUND_CURRENT_STATUS !== 'OPEN') {
-        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, "the current round is locked, you'll have to wait for the next round.");
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, "the current round is locked, you'll have to wait for the next round.");
         return;
     }
 
@@ -61,7 +58,7 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
         const playerHasNotJoinedRound = playerData === undefined;
         if (playerHasNotJoinedRound) {
             // If not, go get them and cache their details...
-            playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId, discordMessage);
+            playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId, guildId, discordUserId);
             logger.info(`Player (ID '${discordUserId}') has been registered against this round.`);
         }
 
@@ -74,7 +71,7 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
 
             // Check if player has enough money, and write new values to memory if they do.
             if (playerData.BankAccount[0].amountAsNumber < Number((bettingData.amount as number) * 100)) {
-                await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, 'you do not have enough funds to place this bet.');
+                await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, 'you do not have enough funds to place this bet.');
                 return;
             }
 
@@ -82,7 +79,7 @@ export async function PROCESS_ROULETTE_BET(discordMessage: Message, bettingData:
             logger.info(`Player (ID '${discordUserId}') has had their bet registered against this round`);
         }
     } else {
-        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ' that was an invalid bet, please try again.');
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, ' that was an invalid bet, please try again.');
     }
 }
 
@@ -112,9 +109,9 @@ function VALIDATE_ROULETTE_BET(bettingData: bettingDataToBeProcessed): boolean {
     return IS_VALID_AMOUNT && IS_VALID_BET;
 }
 
-export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, discordMessage: Message): Promise<RoulettePlayer | undefined> {
+export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, guildId: string, username: string): Promise<RoulettePlayer | undefined> {
     if (ROULETTE_ROUND === null) {
-        SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ` there is currently no active round to bet against, try again soon.`);
+        SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, ` there is currently no active round to bet against, try again soon.`);
     }
     try {
         let playerData = null as RoulettePlayer | null;
@@ -133,8 +130,8 @@ export async function JOIN_PLAYER_TO_ROULETTE_ROUND(discordUserId: string, disco
 
 
         if (playerData === null) {
-            await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: discordMessage.guildId }, ` you have now been registered, we've gifted you $1,000 to start playing with!`);
-            playerData = (await REGISTER_PLAYER(discordUserId, discordMessage.author.username)) as RoulettePlayer;
+            await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId, guildId: guildId }, ` you have now been registered, we've gifted you $1,000 to start playing with!`);
+            playerData = (await REGISTER_PLAYER(discordUserId, username)) as RoulettePlayer;
         }
 
         playerData.previousPosition = playerData?.BankAccount[0].amountAsNumber
@@ -202,6 +199,13 @@ async function CREATE_ROULETTE_BET(playerData: RoulettePlayer, bettingData: bett
 
 export async function REPEAT_LAST_BET(discordMessage: Message) {
 
+    const [ _cmd, roundsToRepeat ] = discordMessage.content.split(' ');
+    const roundsToRepeatAsNumber = Number(roundsToRepeat);
+    if (isNaN(roundsToRepeatAsNumber) || roundsToRepeatAsNumber < 1) {
+        await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: discordMessage.author.id, guildId: discordMessage.guildId }, `Please provide a valid number of rounds to repeat.`);
+        return;
+    }
+
     const playerData = await prisma.player.findFirst({
         where: {
             discordId: discordMessage.author.id,
@@ -216,7 +220,7 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
     }) as RoulettePlayer | null;
 
     if (playerData === null) {
-        const playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordMessage.author.id, discordMessage);
+        const playerData = await JOIN_PLAYER_TO_ROULETTE_ROUND(discordMessage.author.id, discordMessage.guildId as string, discordMessage.author.username);
         if (playerData) {
             await SEND_DISCORD_MESSAGE({ targetChannelKey: 'BETTING_CHANNEL_ID', discordUserId: discordMessage.author.id, guildId: discordMessage.guildId }, `You didn't have a bet to repeat, but you have now been registered, we've gifted you $1,000 to start playing with!`);
         } 
@@ -247,6 +251,7 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
         return;
     }
 
+    const betsToRepeat = [];
     if (mostRecentRoundsBets !== null) {
 
         for (let i = 0; i < mostRecentRoundsBets.length; i++) {
@@ -256,11 +261,24 @@ export async function REPEAT_LAST_BET(discordMessage: Message) {
                 bet: bet.bet
             } as bettingDataToBeProcessed
 
-            await PROCESS_ROULETTE_BET(discordMessage, bettingData);
+            if (roundsToRepeatAsNumber > 1) {
+                betsToRepeat.push(bettingData);
+            }
+
+            await PROCESS_ROULETTE_BET(playerData.discordId, discordMessage.guildId as string, bettingData);
         }
     }
     
     else {
         await SEND_DISCORD_MESSAGE({ targetChannelKey: discordMessage.channelId, discordUserId: playerData.discordId, guildId: discordMessage.guildId }, `Could not find any bet(s) to repeat.`);
+    }
+
+    if (betsToRepeat.length > 0) {
+        await redis.set(`roulette:repeat`, JSON.stringify([{
+            betsToRepeat: betsToRepeat,
+            roundsToRepeat: roundsToRepeatAsNumber - 1,
+            playerId: playerData.id,
+            discordId: discordMessage.author.id
+        }]));
     }
 }

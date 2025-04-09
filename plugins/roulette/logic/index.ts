@@ -6,8 +6,10 @@ import { GENERATE_PLAYER_BETS, GENERATE_PLAYERS, UPDATE_DISCORD_MESSAGE, DUMP_TO
 import { PROCESS_ROULETTE_RESULTS } from './result-logic';
 
 import { RoulettePlay, RoulettePlayState } from '@prisma/client';
-import { RoulettePlayerBetExt } from '../types/roulette'
+import { RepeatBet, RoulettePlayerBetExt } from '../types/roulette'
 import { RoulettePlayer } from '../../player/types/player'
+import { redis } from '../../../redis/client';
+import { PROCESS_ROULETTE_BET } from './betting-logic';
 
 // Game Globals
 export let ROULETTE_ROUND = null as RoulettePlay | null;
@@ -89,6 +91,29 @@ async function START_ROULETTE() {
         if (ROULETTE_ROUND === null) return;
         ROULETTE_ROUND_CURRENT_STATUS = 'OPEN';
         logger.info(`Starting a new roullete round (ID '${ROULETTE_ROUND?.id}').`);
+
+        // Once the game is live, set any bets that have been placed on a repeat
+        const betsToRepeat_str = await redis.get('roulette:repeat');
+        if (betsToRepeat_str) {
+
+            const playersWithBetsToRepeat = JSON.parse(betsToRepeat_str) as RepeatBet[];
+            for (let i = 0; i < playersWithBetsToRepeat.length; i++) {
+
+                const playerWithRepeats = playersWithBetsToRepeat[i];
+                for (let j = 0; j < playerWithRepeats.betsToRepeat.length; j++) {
+                    const bet = playerWithRepeats.betsToRepeat[j];
+                    await PROCESS_ROULETTE_BET(playerWithRepeats.playerId, playerWithRepeats.discordId, bet);                
+                }
+
+                playerWithRepeats.roundsToRepeat = playerWithRepeats.roundsToRepeat - 1;
+                if (playerWithRepeats.roundsToRepeat <= 0) {
+                    playersWithBetsToRepeat.splice(i, 1);
+                }
+            }
+            
+            await redis.set('roulette:repeat', JSON.stringify(playersWithBetsToRepeat));
+        }
+
 
         // After 2 Minutes & 30 Seconds, lock the active round so no further bets can be placed.
         setTimeout(async () => {
