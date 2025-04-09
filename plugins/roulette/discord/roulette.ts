@@ -5,7 +5,7 @@ import { CONFIG } from '../../../config';
 
 import { ROULETTE_ROUND, ROULETTE_PLAYERS, ROULETTE_ROUND_BETS } from '../logic/index';
 import { formatMoney } from '../../../utils/utilities';
-import { PROCESS_ROULETTE_BET, JOIN_PLAYER_TO_ROULETTE_ROUND, REPEAT_LAST_BET } from '../logic/betting-logic';
+import { PROCESS_ROULETTE_BET, JOIN_PLAYER_TO_ROULETTE_ROUND, REPEAT_LAST_BET, REMOVE_REPEAT_BET } from '../logic/betting-logic';
 
 import IMPORTED_BETTING_PAYOUTS from '../logic/mapping/betting_payouts.json';
 import IMPORTED_BETTING_TRANSLATIONS from '../logic/mapping/betting_translation.json';
@@ -216,6 +216,10 @@ discord.on('messageCreate', async (message) => {
         // Command to save bet template
         if (cmd === '!repeat') {
             REPEAT_LAST_BET(message);
+        }
+
+        if (cmd === '!clear_repeat') {
+            REMOVE_REPEAT_BET(message);
         }
 
         if (cmd === '!dump') {

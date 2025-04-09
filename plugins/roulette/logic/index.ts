@@ -100,13 +100,21 @@ async function START_ROULETTE() {
             for (let i = 0; i < playersWithBetsToRepeat.length; i++) {
 
                 const playerWithRepeats = playersWithBetsToRepeat[i];
+                let breakLoop = false;
                 for (let j = 0; j < playerWithRepeats.betsToRepeat.length; j++) {
                     const bet = playerWithRepeats.betsToRepeat[j];
-                    await PROCESS_ROULETTE_BET(playerWithRepeats.discordId, playerWithRepeats.guildId, bet);                
+                    const result = await PROCESS_ROULETTE_BET(playerWithRepeats.discordId, playerWithRepeats.guildId, bet);
+
+                    // If the player has insufficient funds, break the betting loop
+                    if (result === 'INSUFFICIENT_FUNDS') {
+                        breakLoop = true;
+                        break;
+                    }
                 }
 
+                // If the player has insufficient funds or the repeat count has reached 0, remove the player from the repeat list
                 playerWithRepeats.roundsToRepeat = playerWithRepeats.roundsToRepeat - 1;
-                if (playerWithRepeats.roundsToRepeat <= 0) {
+                if (playerWithRepeats.roundsToRepeat <= 0 || breakLoop) {
                     playersWithBetsToRepeat.splice(i, 1);
                 }
                 
